@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+        <!DOCTYPE mapper
+                PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+                "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yj.mapper.UserMapper">
+
+
+    <resultMap id="userWithDetailsBase" type="com.yj.entity.UserWithDetails">
+        <id property="id" column="uid"/>
+        <result property="phone" column="phone"/>
+        <result property="status" column="status"/>
+        <result property="password" column="password"/>
+        <result property="createDate" column="create_date"/>
+    </resultMap>
+    <!--多表联合查询方法一 官方推荐使用
+    需要使用resultMap进行描述-->
+
+    <resultMap id="userWithDetailsMap" type="com.yj.entity.UserWithDetails">
+        <id property="id" column="uid"/>
+        <result property="phone" column="phone"/>
+        <result property="status" column="status"/>
+        <result property="password" column="password"/>
+        <result property="createDate" column="create_date"/>
+        <!--UserDetails如何封装 1对1使用association-->
+        <association property="userDetails" javaType="com.yj.entity.UserDetails">
+            <id property="id" column="udid"/>
+            <result property="address" column="address"/>
+            <result property="cid" column="cid"/>
+        </association>
+    </resultMap>
+
+    <!-- 方法二 -->
+    <resultMap id="userWithDetailsMap2" type="com.yj.entity.UserWithDetails">
+        <id property="id" column="uid"/>
+        <result property="phone" column="phone"/>
+        <result property="status" column="status"/>
+        <result property="password" column="password"/>
+        <result property="createDate" column="create_date"/>
+        <!--连缀写法-->
+        <result property="userDetails.id" column="udid" />
+        <result property="userDetails.address" column="address"/>
+        <result property="userDetails.cid" column="cid"/>
+    </resultMap>
+
+    <!--方法三 分步查询-->
+    <resultMap id="userWithDetailsMap3" extends="userWithDetailsBase" type="com.yj.entity.UserWithDetails">
+        <association property="userDetails" select="com.yj.mapper.UserDetailsMapper.queryById" column="id"/>
+
+    </resultMap>
+
+
+    <resultMap id="userWithBlog" extends="userWithDetailsBase" type="com.yj.entity.UserBlog">
+        <!--封装博客-->
+        <collection property="blogs" ofType="com.yj.entity.Blog">
+
+            <id property="id" column="bid"/>
+
+            <result property="title" column="title"/>
+            <result property="summary" column="summary"/>
+            <result property="content" column="blogContent"/>
+            <collection property="comments" ofType="com.yj.entity.Comment">
+                <id property="id" column="cid"/>
+                <result property="content" column="commentContent"/>
+            </collection>
+        </collection>
+    </resultMap>
+    <!--查询语句-->
+    <select id="getUserById" resultMap="userWithDetailsMap3">
+       select * from user where id = #{id}
+    </select>
+
+    <select id="queryByIdWithBlog" resultMap="userWithBlog">
+    SELECT t1.`id` uid,t1.`phone`,t1.`password`,t1.`create_date`,t1.`status`,
+    t2.`id` bid,t2.`title`,t2.`summary`,t2.`content` blogContent,t2.`u_id`,
+    t3.`id` cid,t3.`content` commentContent,t3.`b_id`
+     FROM USER t1,Blog t2,comment t3,user_details t4
+     <where>
+         t1.`id`=t2.`u_id`
+          AND t2.`id`=t3.`b_id`
+         AND t1.`id`=#{id}
+
+     </where>
+
+    </select>
+</mapper>
